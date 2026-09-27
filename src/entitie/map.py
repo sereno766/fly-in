@@ -8,7 +8,8 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional
 
-from entities import Connection, Zone
+from .connection import Connection
+from .zone import Zone
 
 
 class ZoneNotFoundError(Exception):
