@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Iterator, Optional, Tuple
 
-from .entitie import Zone, ZoneType
+from .entitie import Zone, ZoneType, Map
 
 
 class ParseError(Exception):
@@ -86,7 +86,7 @@ class Parser:
 
                 yield numero, linha_limpa
 
-    def parse(self) -> Optional[int]:
+    def parse(self) -> tupla[map, Optional[int]]:
         """Percorre o arquivo de mapa e interpreta cada linha.
 
         Por enquanto, monta as instâncias de Zone (a partir de
@@ -100,6 +100,7 @@ class Parser:
         Raises:
             ParseError: Se qualquer linha do arquivo for inválida.
         """
+        mapa = Map()
         nb_drones: Optional[int] = None
 
         for numero, linha in self._iter_lines():
@@ -203,7 +204,11 @@ class Parser:
                     is_end=is_end,
                 )
 
-                print(zone)  # DEBUG temporário — remover no próximo cartão
+                try:
+                    mapa.add_zone(zone)
+                except ValueError as e:
+                    raise ParseError(numero, str((e))) from None
+
 
             elif prefixo == "connection":
                 continue  # fica para o próximo cartão
@@ -211,4 +216,4 @@ class Parser:
             else:
                 raise ParseError(numero, f"prefixo desconhecido: '{prefixo}'")
 
-        return nb_drones
+        return mapa, nb_drones

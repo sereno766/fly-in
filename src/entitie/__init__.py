@@ -10,6 +10,7 @@ Exemplo de uso em outro módulo:
 from .zone import BlockedZoneError, Zone, ZoneType
 from .connection import Connection
 from .drone import Drone, DroneStatus
+from .map import Map
 
 __all__ = [
     "Zone",
@@ -18,4 +19,5 @@ __all__ = [
     "Connection",
     "Drone",
     "DroneStatus",
+    "map",
 ]
