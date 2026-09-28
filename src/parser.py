@@ -1,19 +1,15 @@
 """Módulo Parser.
 
-Define a classe Parser, responsável por ler o arquivo de mapa e,
-nas próximas etapas, construir o Map e a lista de Drones a partir
-dele.
-
-Esta versão já lê nb_drones, start_hub, end_hub e hub, montando os
-objetos Zone correspondentes. Connections e a montagem final do Map
-ficam para o próximo cartão.
+Define a classe Parser, responsável por ler o arquivo de mapa e
+construir o Map (com todas as Zones e Connections) e nb_drones a
+partir dele.
 """
 
 from __future__ import annotations
 
 from typing import Iterator, Optional, Tuple
 
-from .entitie import Zone, ZoneType, Map
+from src.entitie import Connection, Zone, ZoneType, Map
 
 
 class ParseError(Exception):
@@ -60,8 +56,7 @@ class Parser:
         Linhas em branco e linhas de comentário (iniciadas com "#")
         são ignoradas, mas NÃO contam como "puladas" na numeração:
         o número de linha sempre reflete a posição real no arquivo,
-        para que futuras mensagens de erro apontem para o lugar
-        correto (ex.: "erro na linha 7").
+        para que mensagens de erro apontem para o lugar correto.
 
         Yields:
             Tuplas (numero_da_linha, conteudo_da_linha), apenas para
@@ -76,32 +71,30 @@ class Parser:
             for numero, linha in enumerate(f, start=1):
                 linha_limpa = linha.strip()
 
-                # ignora linhas vazias
                 if not linha_limpa:
                     continue
 
-                # ignora comentários
                 if linha_limpa.startswith("#"):
                     continue
 
                 yield numero, linha_limpa
 
-    def parse(self) -> tupla[map, Optional[int]]:
+    def parse(self) -> Tuple[Map, Optional[int]]:
         """Percorre o arquivo de mapa e interpreta cada linha.
 
-        Por enquanto, monta as instâncias de Zone (a partir de
-        start_hub/end_hub/hub) e valida nb_drones. A montagem do
-        Map e o parsing de connection ficam para o próximo cartão.
+        Monta o Map completo (todas as Zones e Connections) e
+        valida nb_drones.
 
         Returns:
-            O valor de nb_drones lido do arquivo (ou None se a linha
-            nb_drones ainda não tiver sido processada).
+            Uma tupla (mapa, nb_drones) com o Map montado e o
+            número de drones lido do arquivo.
 
         Raises:
             ParseError: Se qualquer linha do arquivo for inválida.
         """
         mapa = Map()
         nb_drones: Optional[int] = None
+        pares_conectados: set[frozenset[str]] = set()
 
         for numero, linha in self._iter_lines():
             prefixo, resto = linha.split(":", 1)
@@ -122,7 +115,6 @@ class Parser:
                 nb_drones = valor
 
             elif prefixo in ("start_hub", "hub", "end_hub"):
-                # separa "nome x y" de "[metadata]"
                 if "[" in resto:
                     main_part, metadata_part = resto.split("[", 1)
                     metadata_part = metadata_part.rstrip("]").strip()
@@ -152,7 +144,6 @@ class Parser:
                         numero, "coordenadas x/y devem ser inteiras"
                     ) from None
 
-                # transforma metadata_part num dict {chave: valor}
                 meta: dict[str, str] = {}
                 if metadata_part:
                     for token in metadata_part.split():
@@ -165,7 +156,6 @@ class Parser:
                         chave, valor_meta = token.split("=", 1)
                         meta[chave] = valor_meta
 
-                # valida zone_type
                 tipos_validos = {"normal", "blocked", "restricted", "priority"}
                 zone_type_str = meta.get("zone", "normal")
                 if zone_type_str not in tipos_validos:
@@ -173,13 +163,11 @@ class Parser:
                         numero, f"tipo de zona inválido: '{zone_type_str}'"
                     )
 
-                # color é livre, sem validação
                 color = meta.get("color")
 
                 is_start = prefixo == "start_hub"
                 is_end = prefixo == "end_hub"
 
-                # max_drones: ignorado (nem lido) em start_hub/end_hub
                 max_capacity = 1
                 if not is_start and not is_end and "max_drones" in meta:
                     try:
@@ -207,11 +195,78 @@ class Parser:
                 try:
                     mapa.add_zone(zone)
                 except ValueError as e:
-                    raise ParseError(numero, str((e))) from None
-
+                    raise ParseError(numero, str(e)) from None
 
             elif prefixo == "connection":
-                continue  # fica para o próximo cartão
+                if "[" in resto:
+                    main_part, metadata_part = resto.split("[", 1)
+                    metadata_part = metadata_part.rstrip("]").strip()
+                else:
+                    main_part = resto
+                    metadata_part = ""
+
+                partes = main_part.strip().split("-", 1)
+                if len(partes) != 2:
+                    raise ParseError(
+                        numero,
+                        f"formato de connection inválido: esperado "
+                        f"'nome1-nome2', recebido '{main_part.strip()}'",
+                    )
+                nome1, nome2 = partes
+                nome1 = nome1.strip()
+                nome2 = nome2.strip()
+
+                if not mapa.has_zone(nome1):
+                    raise ParseError(
+                        numero, f"connection referencia zona inexistente: '{nome1}'"
+                    )
+                if not mapa.has_zone(nome2):
+                    raise ParseError(
+                        numero, f"connection referencia zona inexistente: '{nome2}'"
+                    )
+
+                par = frozenset({nome1, nome2})
+                if par in pares_conectados:
+                    raise ParseError(
+                        numero, f"connection duplicada: '{nome1}-{nome2}'"
+                    )
+                pares_conectados.add(par)
+
+                meta = {}
+                if metadata_part:
+                    for token in metadata_part.split():
+                        if "=" not in token:
+                            raise ParseError(
+                                numero,
+                                f"metadata inválida: '{token}' "
+                                "(esperado chave=valor)",
+                            )
+                        chave, valor_meta = token.split("=", 1)
+                        meta[chave] = valor_meta
+
+                max_link_capacity = 1
+                if "max_link_capacity" in meta:
+                    try:
+                        max_link_capacity = int(meta["max_link_capacity"])
+                    except ValueError:
+                        raise ParseError(
+                            numero,
+                            "max_link_capacity deve ser um inteiro positivo",
+                        ) from None
+                    if max_link_capacity <= 0:
+                        raise ParseError(
+                            numero,
+                            "max_link_capacity deve ser um inteiro positivo",
+                        )
+
+                zone_a = mapa.get_zone(nome1)
+                zone_b = mapa.get_zone(nome2)
+                conn = Connection(zone_a, zone_b, max_link_capacity)
+
+                try:
+                    mapa.add_connection(conn)
+                except ValueError as e:
+                    raise ParseError(numero, str(e)) from None
 
             else:
                 raise ParseError(numero, f"prefixo desconhecido: '{prefixo}'")
