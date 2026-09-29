@@ -1,1 +1,0 @@
-print(frozenset({'test', 'awd'}))
