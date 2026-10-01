@@ -148,6 +148,22 @@ class Map:
         self.get_zone(zone_name)
         return list(self._adjacency[zone_name])
 
+    def has_start(self) -> bool:
+        """Verifica se a zona start_hub já foi definida.
+
+        Returns:
+            True se existe uma zona start_hub no Map.
+        """
+        return self._start_zone is not None
+
+    def has_end(self) -> bool:
+        """Verifica se a zona end_hub já foi definida.
+
+        Returns:
+            True se existe uma zona end_hub no Map.
+        """
+        return self._end_zone is not None
+
     def get_start(self) -> Zone:
         """Retorna a zona inicial (start_hub) do Map.
 

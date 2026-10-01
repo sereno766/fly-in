@@ -56,7 +56,9 @@ def test_mapa_valido_parseia_corretamente(tmp_path: Path) -> None:
     vizinhos_meio = mapa.get_neighbors("meio")
     assert len(vizinhos_meio) == 2
 
-    conexao_final = next(c for c in vizinhos_meio if c.connects("meio", "goal"))
+    conexao_final = next(
+        c for c in vizinhos_meio if c.connects("meio", "goal")
+    )
     assert conexao_final.max_link_capacity == 2
 
 
@@ -103,7 +105,9 @@ def test_max_drones_ignorado_em_start_hub(tmp_path: Path) -> None:
 
 def test_nb_drones_negativo_levanta_parse_error(tmp_path: Path) -> None:
     """nb_drones negativo deve levantar ParseError na linha correta."""
-    conteudo = "nb_drones: -3\nstart_hub: a 0 0\nend_hub: b 1 0\nconnection: a-b\n"
+    conteudo = (
+        "nb_drones: -3\nstart_hub: a 0 0\nend_hub: b 1 0\nconnection: a-b\n"
+    )
     caminho = _write_map(tmp_path, conteudo)
 
     with pytest.raises(ParseError) as exc_info:
@@ -114,7 +118,10 @@ def test_nb_drones_negativo_levanta_parse_error(tmp_path: Path) -> None:
 
 def test_nb_drones_nao_numerico_levanta_parse_error(tmp_path: Path) -> None:
     """nb_drones que não é um número deve levantar ParseError."""
-    conteudo = "nb_drones: abc\nstart_hub: a 0 0\nend_hub: b 1 0\nconnection: a-b\n"
+    conteudo = (
+        "nb_drones: abc\nstart_hub: a 0 0\nend_hub: b 1 0\n"
+        "connection: a-b\n"
+    )
     caminho = _write_map(tmp_path, conteudo)
 
     with pytest.raises(ParseError) as exc_info:
@@ -216,15 +223,22 @@ def test_dois_end_hub_levanta_parse_error(tmp_path: Path) -> None:
     assert exc_info.value.line == 4
 
 
-def test_mapa_sem_start_hub_falha_ao_pedir_start(tmp_path: Path) -> None:
-    """Sem start_hub, o parse() não falha, mas get_start() deve falhar."""
+def test_mapa_sem_start_hub_levanta_parse_error(tmp_path: Path) -> None:
+    """Sem start_hub, o próprio parse() deve levantar ParseError."""
     conteudo = "nb_drones: 1\nhub: a 0 0\nend_hub: b 1 0\nconnection: a-b\n"
     caminho = _write_map(tmp_path, conteudo)
 
-    mapa, _ = Parser(caminho).parse()
+    with pytest.raises(ParseError, match="start_hub"):
+        Parser(caminho).parse()
 
-    with pytest.raises(ValueError):
-        mapa.get_start()
+
+def test_mapa_sem_end_hub_levanta_parse_error(tmp_path: Path) -> None:
+    """Sem end_hub, o próprio parse() deve levantar ParseError."""
+    conteudo = "nb_drones: 1\nstart_hub: a 0 0\nhub: b 1 0\nconnection: a-b\n"
+    caminho = _write_map(tmp_path, conteudo)
+
+    with pytest.raises(ParseError, match="end_hub"):
+        Parser(caminho).parse()
 
 
 # --------------------------------------------------------------------------
@@ -232,7 +246,9 @@ def test_mapa_sem_start_hub_falha_ao_pedir_start(tmp_path: Path) -> None:
 # --------------------------------------------------------------------------
 
 
-def test_connection_formato_invalido_levanta_parse_error(tmp_path: Path) -> None:
+def test_connection_formato_invalido_levanta_parse_error(
+    tmp_path: Path,
+) -> None:
     """connection sem o traço separador deve levantar ParseError."""
     conteudo = (
         "nb_drones: 1\n"
@@ -248,7 +264,9 @@ def test_connection_formato_invalido_levanta_parse_error(tmp_path: Path) -> None
     assert exc_info.value.line == 4
 
 
-def test_connection_zona_inexistente_levanta_parse_error(tmp_path: Path) -> None:
+def test_connection_zona_inexistente_levanta_parse_error(
+    tmp_path: Path,
+) -> None:
     """connection referenciando zona não definida deve levantar ParseError."""
     conteudo = (
         "nb_drones: 1\n"
@@ -301,7 +319,9 @@ def test_connection_max_link_capacity_invalido_levanta_parse_error(
     assert exc_info.value.line == 4
 
 
-def test_connection_metadata_invalida_levanta_parse_error(tmp_path: Path) -> None:
+def test_connection_metadata_invalida_levanta_parse_error(
+    tmp_path: Path,
+) -> None:
     """Token de metadata sem '=' deve levantar ParseError."""
     conteudo = (
         "nb_drones: 1\n"
@@ -337,3 +357,168 @@ def test_arquivo_inexistente_levanta_file_not_found_error() -> None:
     """Um caminho de arquivo inexistente deve levantar FileNotFoundError."""
     with pytest.raises(FileNotFoundError):
         Parser("maps/este_arquivo_nao_existe.txt").parse()
+
+
+# --------------------------------------------------------------------------
+# Estrutura do arquivo (nb_drones, ':' e arquivo vazio)
+# --------------------------------------------------------------------------
+
+
+def test_linha_sem_dois_pontos_levanta_parse_error(tmp_path: Path) -> None:
+    """Linha sem ':' deve virar ParseError, não ValueError (crash)."""
+    conteudo = "nb_drones: 2\nstart_hub: a 0 0\nconnection a-b\n"
+    caminho = _write_map(tmp_path, conteudo)
+
+    with pytest.raises(ParseError) as exc_info:
+        Parser(caminho).parse()
+
+    assert exc_info.value.line == 3
+
+
+def test_nb_drones_fora_da_primeira_linha_levanta_parse_error(
+    tmp_path: Path,
+) -> None:
+    """A primeira linha útil precisa ser nb_drones."""
+    conteudo = "start_hub: a 0 0\nnb_drones: 2\nend_hub: b 1 0\n"
+    caminho = _write_map(tmp_path, conteudo)
+
+    with pytest.raises(ParseError) as exc_info:
+        Parser(caminho).parse()
+
+    assert exc_info.value.line == 1
+
+
+def test_nb_drones_depois_de_comentario_e_aceito(tmp_path: Path) -> None:
+    """Comentários e linhas vazias antes de nb_drones são permitidos."""
+    conteudo = (
+        "# comentario\n"
+        "\n"
+        "nb_drones: 2\n"
+        "start_hub: a 0 0\n"
+        "end_hub: b 1 0\n"
+        "connection: a-b\n"
+    )
+    caminho = _write_map(tmp_path, conteudo)
+
+    _, nb_drones = Parser(caminho).parse()
+
+    assert nb_drones == 2
+
+
+def test_nb_drones_repetido_levanta_parse_error(tmp_path: Path) -> None:
+    """nb_drones definido duas vezes deve levantar ParseError."""
+    conteudo = "nb_drones: 2\nnb_drones: 3\n"
+    caminho = _write_map(tmp_path, conteudo)
+
+    with pytest.raises(ParseError) as exc_info:
+        Parser(caminho).parse()
+
+    assert exc_info.value.line == 2
+
+
+def test_arquivo_vazio_levanta_parse_error(tmp_path: Path) -> None:
+    """Arquivo só com comentários não define nb_drones: ParseError."""
+    caminho = _write_map(tmp_path, "# nada aqui\n\n")
+
+    with pytest.raises(ParseError, match="nb_drones"):
+        Parser(caminho).parse()
+
+
+# --------------------------------------------------------------------------
+# Sintaxe do bloco de metadata
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "linha_hub",
+    [
+        "hub: c 2 0 [zone=normal",          # sem ']'
+        "hub: c 2 0 [color=red] lixo",      # texto depois do ']'
+        "hub: c 2 0 color=red]",            # ']' sem '['
+        "hub: c 2 0 [foo=bar]",             # chave desconhecida
+        "hub: c 2 0 [max_drone=2]",         # erro de digitação na chave
+        "hub: c 2 0 [color=]",              # valor vazio
+        "hub: c 2 0 [color=red color=blue]",  # chave repetida
+        "hub: c 2 0 [[color=red]]",         # colchetes extras
+    ],
+)
+def test_metadata_mal_formada_levanta_parse_error(
+    tmp_path: Path, linha_hub: str
+) -> None:
+    """Qualquer bloco de metadata mal formado deve levantar ParseError."""
+    conteudo = (
+        "nb_drones: 1\n"
+        "start_hub: a 0 0\n"
+        "end_hub: b 1 0\n"
+        f"{linha_hub}\n"
+    )
+    caminho = _write_map(tmp_path, conteudo)
+
+    with pytest.raises(ParseError) as exc_info:
+        Parser(caminho).parse()
+
+    assert exc_info.value.line == 4
+
+
+def test_metadata_de_zona_em_connection_levanta_parse_error(
+    tmp_path: Path,
+) -> None:
+    """connection só aceita max_link_capacity, não chaves de zona."""
+    conteudo = (
+        "nb_drones: 1\n"
+        "start_hub: a 0 0\n"
+        "end_hub: b 1 0\n"
+        "connection: a-b [color=red]\n"
+    )
+    caminho = _write_map(tmp_path, conteudo)
+
+    with pytest.raises(ParseError) as exc_info:
+        Parser(caminho).parse()
+
+    assert exc_info.value.line == 4
+
+
+def test_metadata_vazia_e_aceita(tmp_path: Path) -> None:
+    """Um bloco '[]' vazio é válido e usa os valores padrão."""
+    conteudo = (
+        "nb_drones: 1\n"
+        "start_hub: a 0 0 []\n"
+        "end_hub: b 1 0\n"
+        "connection: a-b []\n"
+    )
+    caminho = _write_map(tmp_path, conteudo)
+
+    mapa, _ = Parser(caminho).parse()
+
+    assert mapa.get_neighbors("a")[0].max_link_capacity == 1
+
+
+def test_connection_para_a_mesma_zona_levanta_parse_error(
+    tmp_path: Path,
+) -> None:
+    """connection: a-a (zona ligada a ela mesma) deve levantar ParseError."""
+    conteudo = (
+        "nb_drones: 1\n"
+        "start_hub: a 0 0\n"
+        "end_hub: b 1 0\n"
+        "connection: a-a\n"
+    )
+    caminho = _write_map(tmp_path, conteudo)
+
+    with pytest.raises(ParseError) as exc_info:
+        Parser(caminho).parse()
+
+    assert exc_info.value.line == 4
+
+
+def test_todos_os_mapas_do_subject_parseiam() -> None:
+    """Todos os mapas oficiais (fora de maps/broken) devem ser válidos."""
+    raiz = Path(__file__).resolve().parents[1] / "maps"
+    mapas = [
+        m for m in sorted(raiz.rglob("*.txt")) if m.parent.name != "broken"
+    ]
+
+    assert mapas, "nenhum mapa encontrado em maps/"
+    for mapa_path in mapas:
+        _, nb_drones = Parser(str(mapa_path)).parse()
+        assert nb_drones > 0
