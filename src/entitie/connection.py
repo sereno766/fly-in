@@ -47,6 +47,21 @@ class Connection:
         self.zone_b = zone_b
         self.max_link_capacity = max_link_capacity
 
+    @property
+    def name(self) -> str:
+        """Nome da conexão no formato 'zona_a-zona_b'.
+
+        É derivado das duas zonas (não é guardado à parte), então
+        nunca fica desatualizado. Usado na saída da simulação para
+        drones em trânsito rumo a uma zona restricted
+        (formato D<ID>-<conexão>).
+
+        Returns:
+            Os nomes das duas zonas, na ordem do arquivo, unidos
+            por um traço.
+        """
+        return f"{self.zone_a.name}-{self.zone_b.name}"
+
     def other_zone(self, zone: Zone) -> Zone:
         """Dada uma das zonas da conexão, retorna a zona do outro lado.
 
@@ -99,6 +114,6 @@ class Connection:
     def __repr__(self) -> str:
         """Retorna uma representação textual inequívoca da conexão (debug)."""
         return (
-            f"Connection({self.zone_a.name}-{self.zone_b.name}, "
+            f"Connection({self.name}, "
             f"max_link_capacity={self.max_link_capacity})"
         )
