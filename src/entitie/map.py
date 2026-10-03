@@ -148,6 +148,24 @@ class Map:
         self.get_zone(zone_name)
         return list(self._adjacency[zone_name])
 
+    def get_connection(
+        self, name1: str, name2: str
+    ) -> Optional[Connection]:
+        """Busca a conexão que liga duas zonas (em qualquer ordem).
+
+        Args:
+            name1: Nome de uma das zonas.
+            name2: Nome da outra zona.
+
+        Returns:
+            A Connection entre as duas, ou None se não forem vizinhas
+            (ou se name1 não existir no Map).
+        """
+        for conn in self._adjacency.get(name1, []):
+            if conn.connects(name1, name2):
+                return conn
+        return None
+
     def has_start(self) -> bool:
         """Verifica se a zona start_hub já foi definida.
 

@@ -120,6 +120,23 @@ class Zone:
             return False
         return current >= self.max_capacity
 
+    def fits(self, count: int) -> bool:
+        """Verifica se a zona comporta "count" drones ao mesmo tempo.
+
+        Diferente de is_full() (que pergunta "cabe MAIS um?"), aqui a
+        pergunta é "esse total cabe?" — útil para validar o estado
+        final de um turno inteiro de uma vez.
+
+        Args:
+            count: Total de drones que ficariam na zona.
+
+        Returns:
+            True se couber. Start e end sempre comportam (ilimitadas).
+        """
+        if self.is_start or self.is_end:
+            return True
+        return count <= self.max_capacity
+
     def __eq__(self, other: object) -> bool:
         """Duas zonas são iguais se e somente se têm o mesmo nome."""
         if not isinstance(other, Zone):
