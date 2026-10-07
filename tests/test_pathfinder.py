@@ -143,3 +143,69 @@ def test_grafo_desconexo_levanta_no_path_error(tmp_path: Path) -> None:
             "end_hub: goal 9 9\n"
             "connection: start-a\n"
         ))
+
+
+# --------------------------------------------------------------------------
+# Zonas priority: desempate
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("primeira,segunda", [("comum", "vip"),
+                                              ("vip", "comum")])
+def test_priority_vence_empate(
+    tmp_path: Path, primeira: str, segunda: str
+) -> None:
+    """Mesmo custo: escolhe a rota priority, em qualquer ordem no arquivo."""
+    caminho = _caminho(tmp_path, (
+        "nb_drones: 1\n"
+        "start_hub: start 0 0\n"
+        "hub: comum 1 0\n"
+        "hub: vip 1 1 [zone=priority]\n"
+        "end_hub: goal 2 0\n"
+        f"connection: start-{primeira}\n"
+        f"connection: {primeira}-goal\n"
+        f"connection: start-{segunda}\n"
+        f"connection: {segunda}-goal\n"
+    ))
+
+    assert caminho == ["start", "vip", "goal"]
+
+
+def test_priority_nao_vence_caminho_mais_barato(tmp_path: Path) -> None:
+    """Priority só desempata: rota normal de custo 2 vence priority de 3."""
+    caminho = _caminho(tmp_path, (
+        "nb_drones: 1\n"
+        "start_hub: start 0 0\n"
+        "hub: comum 1 0\n"
+        "hub: vip 1 1 [zone=priority]\n"
+        "hub: vip2 2 1 [zone=priority]\n"
+        "end_hub: goal 2 0\n"
+        "connection: start-comum\n"
+        "connection: comum-goal\n"
+        "connection: start-vip\n"
+        "connection: vip-vip2\n"
+        "connection: vip2-goal\n"
+    ))
+
+    assert caminho == ["start", "comum", "goal"]
+
+
+def test_mais_priority_vence(tmp_path: Path) -> None:
+    """Duas rotas de custo 3: a com 2 zonas priority vence a com 1."""
+    caminho = _caminho(tmp_path, (
+        "nb_drones: 1\n"
+        "start_hub: start 0 0\n"
+        "hub: p1 1 0 [zone=priority]\n"
+        "hub: n1 2 0\n"
+        "hub: p2 1 1 [zone=priority]\n"
+        "hub: p3 2 1 [zone=priority]\n"
+        "end_hub: goal 3 0\n"
+        "connection: start-p1\n"
+        "connection: p1-n1\n"
+        "connection: n1-goal\n"
+        "connection: start-p2\n"
+        "connection: p2-p3\n"
+        "connection: p3-goal\n"
+    ))
+
+    assert caminho == ["start", "p2", "p3", "goal"]

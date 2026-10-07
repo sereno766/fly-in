@@ -40,9 +40,12 @@ class PathFinder:
     def shortest_path(self) -> List[str]:
         """Calcula o caminho mais barato da start até a end.
 
-        Usa uma fila de prioridade (heapq) com pares
-        (custo_acumulado, nome_da_zona): a cada passo, sai da fila a
-        zona alcançada com o MENOR custo até agora.
+        Usa uma fila de prioridade (heapq). Cada caminho é comparado
+        pela chave (custo, -nº_de_zonas_priority): tuplas se comparam
+        elemento a elemento, então custo menor sempre vence e, com
+        custo igual, vence o caminho com MAIS zonas priority (o
+        negativo dele é menor). A cada passo, sai da fila a zona com
+        a menor chave até agora.
 
         Returns:
             Os nomes das zonas do caminho, de "start" até "end".
@@ -53,16 +56,17 @@ class PathFinder:
         start = self._map.get_start().name
         end = self._map.get_end().name
 
-        custo: Dict[str, int] = {start: 0}
+        # chave = (custo, -prioridades); menor chave = caminho melhor
+        melhor: Dict[str, Tuple[int, int]] = {start: (0, 0)}
         anterior: Dict[str, str] = {}
-        fila: List[Tuple[int, str]] = [(0, start)]
+        fila: List[Tuple[int, int, str]] = [(0, 0, start)]
 
         while fila:
-            custo_atual, nome = heapq.heappop(fila)
+            custo_atual, neg_prio, nome = heapq.heappop(fila)
             if nome == end:
                 return self._rebuild(anterior, start, end)
-            # entrada velha: já achamos um caminho mais barato até aqui
-            if custo_atual > custo[nome]:
+            # entrada velha: já achamos um caminho melhor até aqui
+            if (custo_atual, neg_prio) > melhor[nome]:
                 continue
 
             zona = self._map.get_zone(nome)
@@ -71,11 +75,16 @@ class PathFinder:
                 # blocked: inacessível, nunca entra na fila
                 if vizinho.zone_type is ZoneType.BLOCKED:
                     continue
-                novo_custo = custo_atual + vizinho.movement_cost()
-                if novo_custo < custo.get(vizinho.name, novo_custo + 1):
-                    custo[vizinho.name] = novo_custo
+                ganho = 1 if vizinho.zone_type is ZoneType.PRIORITY else 0
+                nova_chave = (
+                    custo_atual + vizinho.movement_cost(),
+                    neg_prio - ganho,
+                )
+                atual = melhor.get(vizinho.name)
+                if atual is None or nova_chave < atual:
+                    melhor[vizinho.name] = nova_chave
                     anterior[vizinho.name] = nome
-                    heapq.heappush(fila, (novo_custo, vizinho.name))
+                    heapq.heappush(fila, (*nova_chave, vizinho.name))
 
         raise NoPathError(f"não existe caminho de '{start}' até '{end}'")
 
