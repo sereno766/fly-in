@@ -336,3 +336,64 @@ def test_mapas_oficiais_easy_rodam_com_movimentos_na_mao(
     assert linhas[-1] == "D2-goal"
     assert sim.is_finished()
     assert sim.turn == 4      # = ótimo do subject
+
+
+# --------------------------------------------------------------------------
+# run(): loop de turnos
+# --------------------------------------------------------------------------
+
+
+def test_run_executa_ate_todos_chegarem(tmp_path: Path) -> None:
+    """run() executa os turnos e devolve uma linha por turno."""
+    sim = _sim(tmp_path, LINHA)
+    plano = [
+        {"D1": "a"},
+        {"D1": "b", "D2": "a"},
+        {"D1": "goal", "D2": "b", "D3": "a"},
+        {"D2": "goal", "D3": "b"},
+        {"D3": "goal"},
+    ]
+
+    linhas = sim.run(plano)
+
+    assert linhas == [
+        "D1-a",
+        "D1-b D2-a",
+        "D1-goal D2-b D3-a",
+        "D2-goal D3-b",
+        "D3-goal",
+    ]
+    assert sim.is_finished()
+
+
+def test_run_para_quando_todos_chegam(tmp_path: Path) -> None:
+    """Turnos extras depois que todos chegaram não são executados."""
+    sim = _sim(tmp_path, LINHA.replace("nb_drones: 3", "nb_drones: 1"))
+
+    linhas = sim.run([{"D1": "a"}, {"D1": "b"}, {"D1": "goal"}, {}, {}])
+
+    assert len(linhas) == 3
+    assert sim.turn == 3
+
+
+def test_run_falha_se_plano_nao_entrega_todos(tmp_path: Path) -> None:
+    """Se o plano acabar com drone fora da end, é erro claro."""
+    sim = _sim(tmp_path, LINHA)
+
+    with pytest.raises(SimulationError, match="D1, D2, D3"):
+        sim.run([{"D1": "a"}])
+
+
+def test_drone_entregue_some_da_saida(tmp_path: Path) -> None:
+    """Depois de chegar na end, o drone não aparece mais nas linhas."""
+    sim = _sim(tmp_path, LINHA)
+    linhas = sim.run([
+        {"D1": "a"},
+        {"D1": "b", "D2": "a"},
+        {"D1": "goal", "D2": "b", "D3": "a"},
+        {"D2": "goal", "D3": "b"},
+        {"D3": "goal"},
+    ])
+
+    assert all("D1" not in linha for linha in linhas[3:])
+    assert sim.zone_occupancy() == {}

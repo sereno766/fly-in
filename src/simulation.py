@@ -159,6 +159,39 @@ class Simulation:
             if drone.drone_id in saida
         )
 
+    def run(self, plano: List[Dict[str, str]]) -> List[str]:
+        """Executa um plano completo, turno a turno.
+
+        Cada turno passa por apply_turn() (que valida tudo). O loop
+        para quando todos os drones estão na end; se o plano acabar
+        antes disso, é um erro do plano.
+
+        Args:
+            plano: Um dict de movimentos por turno (ver apply_turn).
+
+        Returns:
+            As linhas de saída, uma por turno executado.
+
+        Raises:
+            SimulationError: Se algum turno violar as regras, ou se o
+                plano acabar com drones fora da end.
+        """
+        linhas: List[str] = []
+        for moves in plano:
+            if self.is_finished():
+                break
+            linhas.append(self.apply_turn(moves))
+
+        if not self.is_finished():
+            faltando = [
+                d.drone_id for d in self._drones if not d.is_delivered()
+            ]
+            raise SimulationError(
+                f"plano terminou com drones fora da end: "
+                f"{', '.join(faltando)}"
+            )
+        return linhas
+
     def _validate_arrivals(self, moves: Dict[str, str]) -> List[Drone]:
         """Lista os drones em trânsito, que chegam obrigatoriamente.
 
