@@ -3,8 +3,11 @@
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+import pytest
+
 from src.entitie import Map
 from src.parser import Parser
+from src.pathfinder import NoPathError
 from src.reservation import ReservationTable
 from src.scheduler import Passo, Scheduler
 from src.simulation import Simulation
@@ -185,3 +188,75 @@ def test_mapa_oficial_easy_01_no_otimo() -> None:
     linhas = _juiz(mapa, nb, Scheduler.to_moves(_planejar(mapa, nb)))
 
     assert len(linhas) == 4
+
+
+# --------------------------------------------------------------------------
+# plan_all(): distribuição de D1..Dn
+# --------------------------------------------------------------------------
+
+
+def test_drones_se_dividem_entre_rotas_paralelas(tmp_path: Path) -> None:
+    """Duas rotas iguais de capacidade 1: D1 e D2 saem juntos, uma cada."""
+    mapa, nb = _mapa(tmp_path, (
+        "nb_drones: 2\n"
+        "start_hub: start 0 0\n"
+        "hub: cima 1 1\n"
+        "hub: baixo 1 -1\n"
+        "end_hub: goal 2 0\n"
+        "connection: start-cima\n"
+        "connection: cima-goal\n"
+        "connection: start-baixo\n"
+        "connection: baixo-goal\n"
+    ))
+
+    moves = Scheduler(mapa, ReservationTable()).plan_all(nb)
+
+    assert sorted(moves[0].values()) == ["baixo", "cima"]
+    assert len(_juiz(mapa, nb, moves)) == 2
+
+
+def test_muitos_drones_num_gargalo_terminam(tmp_path: Path) -> None:
+    """20 drones numa fila de capacidade 1: 1 chega por turno, sem travar."""
+    mapa, nb = _mapa(tmp_path, LINHA.replace("nb_drones: 2", "nb_drones: 20"))
+
+    linhas = _juiz(mapa, nb, Scheduler(mapa, ReservationTable()).plan_all(nb))
+
+    assert len(linhas) == 21      # 2 turnos do D1 + 1 por drone a mais
+
+
+def test_grafo_desconexo_levanta_no_path_error(tmp_path: Path) -> None:
+    """Sem caminho até a end: erro claro já ao criar o Scheduler."""
+    mapa, _ = _mapa(tmp_path, (
+        "nb_drones: 2\n"
+        "start_hub: start 0 0\n"
+        "hub: a 1 0\n"
+        "end_hub: goal 9 9\n"
+        "connection: start-a\n"
+    ))
+
+    with pytest.raises(NoPathError):
+        Scheduler(mapa, ReservationTable())
+
+
+OTIMOS: Dict[str, int] = {
+    "easy/01_linear_path.txt": 4,
+    "easy/02_simple_fork.txt": 4,
+    "easy/03_basic_capacity.txt": 4,
+    "medium/01_dead_end_trap.txt": 8,
+    "medium/02_circular_loop.txt": 10,
+    "medium/03_priority_puzzle.txt": 6,
+    "hard/01_maze_nightmare.txt": 13,
+    "hard/02_capacity_hell.txt": 16,
+    "hard/03_ultimate_challenge.txt": 26,
+    "challenger/01_the_impossible_dream.txt": 43,
+}
+
+
+@pytest.mark.parametrize("arquivo,otimo", sorted(OTIMOS.items()))
+def test_mapas_oficiais_validos_e_no_otimo(arquivo: str, otimo: int) -> None:
+    """Cada mapa do subject passa pelo juiz no nº ótimo de turnos."""
+    mapa, nb = Parser(str(RAIZ / "maps" / arquivo)).parse()
+
+    linhas = _juiz(mapa, nb, Scheduler(mapa, ReservationTable()).plan_all(nb))
+
+    assert len(linhas) == otimo

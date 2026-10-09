@@ -14,6 +14,7 @@ import heapq
 from typing import Dict, List, Optional, Tuple
 
 from src.entitie import Map, ZoneType
+from src.pathfinder import NoPathError, PathFinder
 from src.reservation import ReservationTable
 
 # Um passo do caminho no tempo: (turno, nome da zona)
@@ -26,17 +27,48 @@ class Scheduler:
     Attributes:
         (privado) _map: O grafo de zonas e conexões.
         (privado) _agenda: Reservas dos drones já planejados.
+        (privado) _custo_minimo: Turnos do caminho mais barato da
+            start até a end com o mapa vazio (via PathFinder).
     """
 
     def __init__(self, mapa: Map, agenda: ReservationTable) -> None:
-        """Prepara o scheduler.
+        """Prepara o scheduler e confere se a end é alcançável.
 
         Args:
             mapa: Map já montado pelo Parser.
             agenda: Tabela de reservas compartilhada entre os drones.
+
+        Raises:
+            NoPathError: Se não existir caminho da start até a end
+                (grafo desconexo ou só passando por zonas blocked).
         """
         self._map = mapa
         self._agenda = agenda
+        caminho = PathFinder(mapa).shortest_path()
+        self._custo_minimo = sum(
+            mapa.get_zone(nome).movement_cost() for nome in caminho[1:]
+        )
+
+    def plan_all(self, nb_drones: int) -> List[Dict[str, str]]:
+        """Planeja D1..Dn em ordem, cada um reservando seu caminho.
+
+        Quem planeja primeiro reserva primeiro: cada drone procura o
+        caminho que chega mais cedo SEM bater nas reservas dos
+        anteriores. Assim os drones se espalham sozinhos por rotas
+        paralelas quando a rota curta está cheia, ou esperam a vez.
+
+        Args:
+            nb_drones: Quantidade de drones.
+
+        Returns:
+            Os movimentos por turno, no formato de apply_turn().
+        """
+        caminhos: Dict[str, List[Passo]] = {}
+        for i in range(1, nb_drones + 1):
+            caminho = self.plan_drone()
+            self.reserve(caminho)
+            caminhos[f"D{i}"] = caminho
+        return self.to_moves(caminhos)
 
     def plan_drone(self) -> List[Passo]:
         """Acha o caminho que chega MAIS CEDO na end, sem conflitos.
@@ -46,13 +78,23 @@ class Scheduler:
         (turno, -nº_priority), então com o mesmo turno de chegada
         vence o caminho com mais zonas priority.
 
+        Limite: depois de agenda.last_turn o mapa está vazio, então
+        esperar na start (ilimitada) até lá e seguir o caminho mínimo
+        SEMPRE chega até last_turn + custo_minimo. Estados depois desse
+        turno nunca são necessários, e a busca sempre termina.
+
         Returns:
             O caminho como lista de (turno, zona), de (0, start) até a
             end. Esperas aparecem como a mesma zona em turnos seguidos;
             uma ida para restricted pula de t para t + 2.
+
+        Raises:
+            NoPathError: Se nada chegar na end dentro do limite (não
+                deveria acontecer; protege contra loop infinito).
         """
         start = self._map.get_start().name
         end = self._map.get_end().name
+        limite = self._agenda.last_turn + self._custo_minimo
 
         inicio: Passo = (0, start)
         melhor: Dict[Passo, int] = {inicio: 0}          # estado -> -prio
@@ -68,6 +110,8 @@ class Scheduler:
                 continue
 
             for chegada, destino, ganho in self._options(nome, turno):
+                if chegada > limite:
+                    continue
                 estado = (chegada, destino)
                 nova_prio = neg_prio - ganho
                 atual = melhor.get(estado)
@@ -76,9 +120,9 @@ class Scheduler:
                     anterior[estado] = (turno, nome)
                     heapq.heappush(fila, (chegada, nova_prio, destino))
 
-        # só chega aqui se a fila esvaziar, o que não acontece: esperar
-        # na start é sempre possível (o limite fica para o próximo card)
-        raise RuntimeError("busca terminou sem chegar na end")
+        raise NoPathError(
+            f"nenhum caminho até '{end}' dentro de {limite} turnos"
+        )
 
     def reserve(self, caminho: List[Passo]) -> None:
         """Registra o caminho de um drone na agenda.
