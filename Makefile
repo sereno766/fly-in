@@ -9,8 +9,8 @@ VENV_DIR    := venv
 VENV_BIN    := $(VENV_DIR)/bin
 PIP         := $(VENV_BIN)/pip
 PY          := $(VENV_BIN)/python
-MAIN        := src/main.py
-MAP         ?= maps/easy_1.txt
+MAIN        := main.py
+MAP         ?= maps/easy/01_linear_path.txt
 
 # --- install ---------------------------------------------------------------
 # Cria o ambiente virtual (se não existir) e instala as dependências.
@@ -22,7 +22,7 @@ install:
 
 # --- run ---------------------------------------------------------------
 # Executa o script principal do projeto.
-# Uso: make run MAP=maps/hard_2.txt
+# Uso: make run MAP=maps/hard/02_capacity_hell.txt
 .PHONY: run
 run:
 	$(PY) $(MAIN) $(MAP)
