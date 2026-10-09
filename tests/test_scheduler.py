@@ -260,3 +260,58 @@ def test_mapas_oficiais_validos_e_no_otimo(arquivo: str, otimo: int) -> None:
     linhas = _juiz(mapa, nb, Scheduler(mapa, ReservationTable()).plan_all(nb))
 
     assert len(linhas) == otimo
+
+
+# --------------------------------------------------------------------------
+# Deadlock e conflito
+# --------------------------------------------------------------------------
+
+
+def test_gargalo_de_conexao_um_drone_por_turno(tmp_path: Path) -> None:
+    """Zona 'a' cabe 4, mas a conexão start-a só passa 1 por turno."""
+    mapa, nb = _mapa(tmp_path, (
+        "nb_drones: 4\n"
+        "start_hub: start 0 0\n"
+        "hub: a 1 0 [max_drones=4]\n"
+        "end_hub: goal 2 0\n"
+        "connection: start-a\n"
+        "connection: a-goal [max_link_capacity=4]\n"
+    ))
+
+    moves = Scheduler(mapa, ReservationTable()).plan_all(nb)
+    linhas = _juiz(mapa, nb, moves)
+
+    entradas_por_turno = [
+        sum(1 for destino in turno.values() if destino == "a")
+        for turno in moves
+    ]
+    assert max(entradas_por_turno) == 1
+    assert len(linhas) == 5           # 4 entradas em fila + 1 até a goal
+
+
+def test_nunca_planeja_troca_de_lugar_na_mesma_conexao() -> None:
+    """Em mapa circular, nenhum turno usa a mesma conexão nos 2 sentidos."""
+    mapa, nb = Parser(
+        str(RAIZ / "maps/medium/02_circular_loop.txt")
+    ).parse()
+    caminhos = _planejar(mapa, nb)
+
+    usos: Dict[Tuple[int, str], int] = {}
+    for caminho in caminhos.values():
+        for (t1, z1), (_, z2) in zip(caminho, caminho[1:]):
+            if z1 != z2:
+                conn = mapa.get_connection(z1, z2)
+                assert conn is not None
+                chave = (t1 + 1, conn.name)
+                usos[chave] = usos.get(chave, 0) + 1
+                assert usos[chave] <= conn.max_link_capacity
+
+
+def test_sem_deadlock_com_muitos_drones_no_mapa_dificil() -> None:
+    """100 drones no capacity_hell: o plano termina e o juiz aceita."""
+    mapa, _ = Parser(str(RAIZ / "maps/hard/02_capacity_hell.txt")).parse()
+
+    linhas = _juiz(mapa, 100,
+                   Scheduler(mapa, ReservationTable()).plan_all(100))
+
+    assert len(linhas) > 0
