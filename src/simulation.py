@@ -28,6 +28,7 @@ class Simulation:
         (privado) _turn: Número de turnos já executados.
         (privado) _last_crossings: drone_id -> nome da conexão que ele
             atravessou (movimento de 1 turno) no último turno.
+        (privado) _entregas: drone_id -> turno em que chegou na end.
     """
 
     def __init__(self, mapa: Map, nb_drones: int) -> None:
@@ -47,11 +48,21 @@ class Simulation:
         }
         self._turn = 0
         self._last_crossings: Dict[str, str] = {}
+        self._entregas: Dict[str, int] = {}
 
     @property
     def turn(self) -> int:
         """Número de turnos já executados (0 antes do primeiro)."""
         return self._turn
+
+    def delivery_turns(self) -> Dict[str, int]:
+        """Turno em que cada drone chegou na end (métricas).
+
+        Returns:
+            Uma cópia do dict drone_id -> turno da entrega. Drones
+            ainda não entregues não aparecem.
+        """
+        return dict(self._entregas)
 
     def get_drones(self) -> List[Drone]:
         """Retorna os drones da simulação.
@@ -153,6 +164,9 @@ class Simulation:
                 self._last_crossings[drone.drone_id] = conn.name
 
         self._turn += 1
+        for drone_id in saida:
+            if self._by_id[drone_id].is_delivered():
+                self._entregas.setdefault(drone_id, self._turn)
         return " ".join(
             f"{drone.drone_id}-{saida[drone.drone_id]}"
             for drone in self._drones

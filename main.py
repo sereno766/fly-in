@@ -71,6 +71,12 @@ class FlyInApp:
                                          simulacao.turn))
 
             simulacao.run(plano, mostrar)
+            # métricas só no terminal: não podem misturar com o formato
+            if self._cor:
+                for linha in renderer.summary(simulacao.get_drones(),
+                                              simulacao.delivery_turns(),
+                                              simulacao.turn):
+                    print(linha)
         except ParseError as erro:
             # a mensagem já começa com "Erro de parsing na linha N"
             print(erro, file=sys.stderr)

@@ -120,3 +120,40 @@ def test_painel_mostra_tipo_da_zona(tmp_path: Path) -> None:
     painel = Renderer(mapa, cor=False).panel(sim.get_drones(), sim.turn)
 
     assert "r(restricted): D1" in painel
+
+
+def test_delivery_turns_registra_turno_da_entrega(tmp_path: Path) -> None:
+    """A simulação anota em que turno cada drone chegou na end."""
+    mapa, nb = _mapa(tmp_path)
+    sim = Simulation(mapa, nb)
+    sim.run([
+        {"D1": "r", "D2": "sem_cor"},
+        {"D2": "estranha"},                  # D1 chega em r sozinho
+        {"D1": "goal"},                      # D2 espera 1 turno
+        {"D2": "goal"},
+    ])
+
+    assert sim.delivery_turns() == {"D1": 3, "D2": 4}
+
+
+def test_summary_mostra_custo_e_esperas(tmp_path: Path) -> None:
+    """Custo = movimentos (restricted conta 2); esperas = resto."""
+    mapa, nb = _mapa(tmp_path)
+    sim = Simulation(mapa, nb)
+    sim.run([
+        {"D1": "r", "D2": "sem_cor"},
+        {"D2": "estranha"},
+        {"D1": "goal"},
+        {"D2": "goal"},
+    ])
+
+    linhas = Renderer(mapa, cor=False).summary(
+        sim.get_drones(), sim.delivery_turns(), sim.turn
+    )
+
+    assert linhas == [
+        "=== métricas ===",
+        "D1: entregue no turno 3 | custo 3 | esperas 0",
+        "D2: entregue no turno 4 | custo 3 | esperas 1",
+        "turnos totais: 4 | entrega média: 3.5 | movimentos por turno: 1.5",
+    ]

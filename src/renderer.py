@@ -161,6 +161,46 @@ class Renderer:
             prefixo = f"{APAGADO}{prefixo}{RESET}"
         return f"{prefixo} " + " | ".join(blocos)
 
+    def summary(
+        self,
+        drones: List[Drone],
+        entregas: Dict[str, int],
+        total_turnos: int,
+    ) -> List[str]:
+        """Métricas do fim da simulação.
+
+        Para cada drone: turno da entrega, movimentos (= custo do
+        caminho, já que restricted conta 2) e esperas (turnos parados
+        antes de chegar). No fim, os totais e médias.
+
+        Args:
+            drones: Todos os drones da simulação.
+            entregas: drone_id -> turno em que chegou na end.
+            total_turnos: Turnos totais da simulação.
+
+        Returns:
+            As linhas do resumo (pintadas se a cor estiver ligada).
+        """
+        titulo = "=== métricas ==="
+        linhas = [f"{NEGRITO}{titulo}{RESET}" if self._cor else titulo]
+        movimentos = 0
+        for drone in drones:
+            chegou = entregas.get(drone.drone_id, total_turnos)
+            esperas = chegou - drone.turns_taken
+            movimentos += drone.turns_taken
+            linhas.append(
+                f"{drone.drone_id}: entregue no turno {chegou} | "
+                f"custo {drone.turns_taken} | esperas {esperas}"
+            )
+
+        media = sum(entregas.values()) / len(entregas) if entregas else 0.0
+        por_turno = movimentos / total_turnos if total_turnos else 0.0
+        linhas.append(
+            f"turnos totais: {total_turnos} | entrega média: "
+            f"{media:.1f} | movimentos por turno: {por_turno:.1f}"
+        )
+        return linhas
+
     @staticmethod
     def _ansi(texto: str, rgb: Tuple[int, int, int]) -> str:
         """Envolve o texto num código ANSI truecolor.
