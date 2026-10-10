@@ -90,6 +90,13 @@ class FlyInApp:
                 file=sys.stderr,
             )
             return 1
+        except KeyboardInterrupt:
+            print("\nInterrompido pelo usuário.", file=sys.stderr)
+            return 130
+        except Exception as erro:
+            # rede de segurança: o programa nunca termina com traceback
+            print(f"Erro inesperado: {erro}", file=sys.stderr)
+            return 1
         return 0
 
 

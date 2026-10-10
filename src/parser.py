@@ -68,18 +68,27 @@ class Parser:
             FileNotFoundError: Se o arquivo em self._filepath não
                 existir (o erro nativo do Python já é claro o
                 suficiente aqui, por isso não é reenvelopado).
+            ParseError: Se o arquivo não for texto UTF-8 (ex.: um
+                binário passado por engano).
         """
+        numero = 0
         with open(self._filepath, "r", encoding="utf-8") as f:
-            for numero, linha in enumerate(f, start=1):
-                linha_limpa = linha.strip()
+            try:
+                for numero, linha in enumerate(f, start=1):
+                    linha_limpa = linha.strip()
 
-                if not linha_limpa:
-                    continue
+                    if not linha_limpa:
+                        continue
 
-                if linha_limpa.startswith("#"):
-                    continue
+                    if linha_limpa.startswith("#"):
+                        continue
 
-                yield numero, linha_limpa
+                    yield numero, linha_limpa
+            except UnicodeDecodeError:
+                # o erro acontece ao ler a linha seguinte à última lida
+                raise ParseError(
+                    numero + 1, "arquivo não é um texto UTF-8 válido"
+                ) from None
 
     def _parse_metadata(
         self, numero: int, texto: str, chaves_validas: Set[str]
