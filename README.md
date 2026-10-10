@@ -248,12 +248,7 @@ and reviewer:
 - **Design discussions**: separating the judge (`Simulation`) from the planner,
   and choosing reservation-based scheduling over "k fixed paths + deadlock
   detection".
-- **Implementation**: writing parts of the pathfinding, scheduler, renderer and
-  `main.py` step by step, each step reviewed, tested and explained before
-  moving on.
+- **Implementation support**: drafting code for the pathfinding, scheduler,
+  renderer and `main.py`, which I then reviewed, tested and adapted.
 - **Tests and documentation**: generating test cases (edge cases, malformed
   maps, stress tests) and drafting this README.
-
-Every part was read, run and discussed so that I can explain and modify it
-myself; the test suite (`make test`) checks all the rules and every official
-map.
