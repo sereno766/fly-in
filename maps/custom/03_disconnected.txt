@@ -1,0 +1,10 @@
+# Custom: sintaticamente válido, mas a goal é inalcançável (deve dar erro claro)
+nb_drones: 3
+
+start_hub: start 0 0 [color=green]
+hub: a 1 0
+hub: island 5 5
+end_hub: goal 6 5 [color=red]
+
+connection: start-a
+connection: island-goal

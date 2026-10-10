@@ -1,0 +1,17 @@
+# Custom: três gargalos de capacidade 1 em sequência, com áreas largas entre eles
+nb_drones: 6
+
+start_hub: start 0 0 [color=green]
+hub: gate1 1 0 [color=orange]
+hub: wide1 2 0 [color=blue max_drones=3]
+hub: gate2 3 0 [color=orange]
+hub: wide2 4 0 [color=blue max_drones=3]
+hub: gate3 5 0 [color=orange]
+end_hub: goal 6 0 [color=red]
+
+connection: start-gate1
+connection: gate1-wide1
+connection: wide1-gate2
+connection: gate2-wide2
+connection: wide2-gate3
+connection: gate3-goal

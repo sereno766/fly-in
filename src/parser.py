@@ -23,11 +23,13 @@ class ParseError(Exception):
         """Inicializa o erro com o número da linha e a causa.
 
         Args:
-            line: Número da linha onde o problema foi encontrado.
+            line: Número da linha onde o problema foi encontrado, ou 0
+                quando o erro é do arquivo como um todo (ex.: vazio).
             message: Descrição do que está errado nessa linha.
         """
         self.line = line
-        super().__init__(f"Erro de parsing na linha {line}: {message}")
+        onde = f"na linha {line}" if line > 0 else "no arquivo"
+        super().__init__(f"Erro de parsing {onde}: {message}")
 
 
 class Parser:

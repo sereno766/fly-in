@@ -1,0 +1,11 @@
+# Custom: todo caminho passa só por zonas restricted (2 turnos cada)
+nb_drones: 3
+
+start_hub: start 0 0 [color=green]
+hub: r1 1 0 [zone=restricted color=red max_drones=2]
+hub: r2 2 0 [zone=restricted color=red max_drones=2]
+end_hub: goal 3 0 [color=gold]
+
+connection: start-r1 [max_link_capacity=2]
+connection: r1-r2
+connection: r2-goal

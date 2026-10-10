@@ -1,0 +1,17 @@
+# Custom: grafo com ciclo (a-b-c-a) — o planner não pode ficar girando
+nb_drones: 4
+
+start_hub: start 0 0 [color=green]
+hub: a 1 0 [color=blue]
+hub: b 2 1 [color=blue]
+hub: c 2 -1 [color=blue]
+hub: d 3 0 [color=cyan]
+end_hub: goal 4 0 [color=red]
+
+connection: start-a
+connection: a-b
+connection: b-c
+connection: c-a
+connection: b-d
+connection: c-d
+connection: d-goal [max_link_capacity=2]
