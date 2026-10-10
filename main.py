@@ -2,7 +2,7 @@
 """Ponto de entrada do Fly-in.
 
 Uso:
-    ./main.py <arquivo_de_mapa>
+    ./main.py [--no-color] <arquivo_de_mapa>
 """
 
 from __future__ import annotations
@@ -13,13 +13,19 @@ from typing import List, Optional
 
 from src.parser import ParseError, Parser
 from src.pathfinder import NoPathError
+from src.renderer import Renderer
 from src.reservation import ReservationTable
 from src.scheduler import Scheduler
 from src.simulation import Simulation, SimulationError
 
 
 class FlyInApp:
-    """Aplicação de linha de comando: lê o mapa, planeja e simula."""
+    """Aplicação de linha de comando: lê o mapa, planeja e simula.
+
+    Attributes:
+        (privado) _args: Argumentos da linha de comando.
+        (privado) _cor: True se a saída deve ser colorida.
+    """
 
     def __init__(self, argv: Optional[List[str]] = None) -> None:
         """Lê os argumentos da linha de comando.
@@ -32,12 +38,21 @@ class FlyInApp:
             description="Simulação de roteamento de drones (Fly-in)."
         )
         parser.add_argument("map", help="arquivo de mapa (.txt)")
+        parser.add_argument(
+            "--no-color",
+            action="store_true",
+            help="saída sem cores nem painel (só o formato D<ID>-<zona>)",
+        )
         self._args = parser.parse_args(argv)
+        # cor só num terminal: redirecionada para arquivo/pipe, a saída
+        # fica exatamente no formato exigido, sem códigos ANSI
+        self._cor = sys.stdout.isatty() and not self._args.no_color
 
     def run(self) -> int:
         """Executa o fluxo completo e imprime uma linha por turno.
 
-        Parser -> Scheduler (planeja) -> Simulation (valida e executa).
+        Parser -> Scheduler (planeja) -> Simulation (valida e executa)
+        -> Renderer (mostra cada turno).
 
         Returns:
             Código de saída: 0 em caso de sucesso, 1 em caso de erro.
@@ -45,8 +60,17 @@ class FlyInApp:
         try:
             mapa, nb_drones = Parser(self._args.map).parse()
             plano = Scheduler(mapa, ReservationTable()).plan_all(nb_drones)
-            for linha in Simulation(mapa, nb_drones).run(plano):
-                print(linha)
+            simulacao = Simulation(mapa, nb_drones)
+            renderer = Renderer(mapa, self._cor)
+
+            def mostrar(linha: str) -> None:
+                """Imprime a linha do turno e, com cor, o painel."""
+                print(renderer.format_line(linha))
+                if self._cor:
+                    print(renderer.panel(simulacao.get_drones(),
+                                         simulacao.turn))
+
+            simulacao.run(plano, mostrar)
         except ParseError as erro:
             # a mensagem já começa com "Erro de parsing na linha N"
             print(erro, file=sys.stderr)

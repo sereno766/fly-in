@@ -9,7 +9,7 @@ Ela NÃO decide para onde os drones vão — isso é papel do planner.
 
 from __future__ import annotations
 
-from typing import Dict, List, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from src.entitie import Connection, Drone, Map, Zone, ZoneType
 
@@ -159,7 +159,11 @@ class Simulation:
             if drone.drone_id in saida
         )
 
-    def run(self, plano: List[Dict[str, str]]) -> List[str]:
+    def run(
+        self,
+        plano: List[Dict[str, str]],
+        ao_turno: Optional[Callable[[str], None]] = None,
+    ) -> List[str]:
         """Executa um plano completo, turno a turno.
 
         Cada turno passa por apply_turn() (que valida tudo). O loop
@@ -168,6 +172,9 @@ class Simulation:
 
         Args:
             plano: Um dict de movimentos por turno (ver apply_turn).
+            ao_turno: Função opcional chamada depois de CADA turno com
+                a linha daquele turno — o estado da simulação já está
+                atualizado (útil para imprimir/visualizar turno a turno).
 
         Returns:
             As linhas de saída, uma por turno executado.
@@ -180,7 +187,10 @@ class Simulation:
         for moves in plano:
             if self.is_finished():
                 break
-            linhas.append(self.apply_turn(moves))
+            linha = self.apply_turn(moves)
+            linhas.append(linha)
+            if ao_turno is not None:
+                ao_turno(linha)
 
         if not self.is_finished():
             faltando = [
