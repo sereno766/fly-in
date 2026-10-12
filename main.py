@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from functools import partial
 from typing import List, Optional
 
 from src.parser import ParseError, Parser
@@ -62,15 +63,10 @@ class FlyInApp:
             plano = Scheduler(mapa, ReservationTable()).plan_all(nb_drones)
             simulacao = Simulation(mapa, nb_drones)
             renderer = Renderer(mapa, self._cor)
-
-            def mostrar(linha: str) -> None:
-                """Imprime a linha do turno e, com cor, o painel."""
-                print(renderer.format_line(linha))
-                if self._cor:
-                    print(renderer.panel(simulacao.get_drones(),
-                                         simulacao.turn))
-
-            simulacao.run(plano, mostrar)
+            # partial fixa simulação e renderer: o callback recebe só a linha
+            simulacao.run(
+                plano, partial(self._mostrar_turno, simulacao, renderer)
+            )
             # métricas só no terminal: não podem misturar com o formato
             if self._cor:
                 for linha in renderer.summary(simulacao.get_drones(),
@@ -98,6 +94,22 @@ class FlyInApp:
             print(f"Erro inesperado: {erro}", file=sys.stderr)
             return 1
         return 0
+
+    def _mostrar_turno(
+        self, simulacao: Simulation, renderer: Renderer, linha: str
+    ) -> None:
+        """Imprime a linha de um turno e, no terminal, o painel.
+
+        Chamado pela Simulation depois de cada turno (callback).
+
+        Args:
+            simulacao: Simulação em andamento (estado já atualizado).
+            renderer: Quem formata a saída.
+            linha: Linha do turno no formato D<ID>-<zona>.
+        """
+        print(renderer.format_line(linha))
+        if self._cor:
+            print(renderer.panel(simulacao.get_drones(), simulacao.turn))
 
 
 if __name__ == "__main__":

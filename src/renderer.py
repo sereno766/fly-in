@@ -10,50 +10,56 @@ formato exigido (D<ID>-<zona>), sem nenhum caractere a mais.
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple
+from typing import ClassVar, Dict, List, Optional, Tuple
 
 from src.entitie import Drone, Map, ZoneType
-
-# nome da cor (metadata color=...) -> RGB
-CORES: Dict[str, Tuple[int, int, int]] = {
-    "red": (220, 50, 47),
-    "darkred": (170, 20, 20),
-    "crimson": (220, 20, 60),
-    "maroon": (160, 30, 40),
-    "orange": (255, 140, 0),
-    "gold": (255, 200, 0),
-    "yellow": (230, 210, 40),
-    "brown": (150, 90, 40),
-    "green": (50, 180, 80),
-    "lime": (150, 230, 50),
-    "cyan": (40, 190, 200),
-    "blue": (40, 120, 230),
-    "purple": (150, 60, 200),
-    "violet": (200, 120, 240),
-    "magenta": (210, 60, 180),
-    "pink": (255, 130, 180),
-    "white": (230, 230, 230),
-    "gray": (150, 150, 150),
-    "grey": (150, 150, 150),
-    # preto puro some em terminal escuro: usa um cinza escuro
-    "black": (100, 100, 100),
-}
-
-# sequência usada pela cor especial "rainbow" (uma cor por letra)
-ARCO_IRIS = ["red", "orange", "yellow", "green", "blue", "purple"]
-
-RESET = "\033[0m"
-NEGRITO = "\033[1m"
-APAGADO = "\033[2m"
 
 
 class Renderer:
     """Formata a saída da simulação, com ou sem cores.
 
     Attributes:
+        CORES: Tabela nome da cor -> RGB (atributo de classe).
+        ARCO_IRIS: Cores usadas, letra a letra, pela cor "rainbow".
+        RESET, NEGRITO, APAGADO: Códigos ANSI de estilo.
         (privado) _map: O grafo, para achar a cor e o tipo de cada zona.
         (privado) _cor: True se deve emitir códigos de cor ANSI.
     """
+
+    # nome da cor (metadata color=...) -> RGB
+    CORES: ClassVar[Dict[str, Tuple[int, int, int]]] = {
+        "red": (220, 50, 47),
+        "darkred": (170, 20, 20),
+        "crimson": (220, 20, 60),
+        "maroon": (160, 30, 40),
+        "orange": (255, 140, 0),
+        "gold": (255, 200, 0),
+        "yellow": (230, 210, 40),
+        "brown": (150, 90, 40),
+        "green": (50, 180, 80),
+        "lime": (150, 230, 50),
+        "cyan": (40, 190, 200),
+        "blue": (40, 120, 230),
+        "purple": (150, 60, 200),
+        "violet": (200, 120, 240),
+        "magenta": (210, 60, 180),
+        "pink": (255, 130, 180),
+        "white": (230, 230, 230),
+        "gray": (150, 150, 150),
+        "grey": (150, 150, 150),
+        # preto puro some em terminal escuro: usa um cinza escuro
+        "black": (100, 100, 100),
+    }
+
+    # sequência usada pela cor especial "rainbow" (uma cor por letra)
+    ARCO_IRIS: ClassVar[List[str]] = [
+        "red", "orange", "yellow", "green", "blue", "purple",
+    ]
+
+    # códigos ANSI de estilo
+    RESET: ClassVar[str] = "\033[0m"
+    NEGRITO: ClassVar[str] = "\033[1m"
+    APAGADO: ClassVar[str] = "\033[2m"
 
     def __init__(self, mapa: Map, cor: bool) -> None:
         """Prepara o renderer.
@@ -81,11 +87,12 @@ class Renderer:
         if not self._cor or cor is None:
             return texto
         if cor == "rainbow":
+            arco = self.ARCO_IRIS
             return "".join(
-                self._ansi(letra, CORES[ARCO_IRIS[i % len(ARCO_IRIS)]])
+                self._ansi(letra, self.CORES[arco[i % len(arco)]])
                 for i, letra in enumerate(texto)
             )
-        rgb = CORES.get(cor.lower())
+        rgb = self.CORES.get(cor.lower())
         if rgb is None:
             return texto
         return self._ansi(texto, rgb)
@@ -113,8 +120,9 @@ class Renderer:
                 cor = self._map.get_zone(destino).color
                 destino_fmt = self.paint(destino, cor)
             else:
-                destino_fmt = f"{APAGADO}{destino}{RESET}"
-            partes.append(f"{NEGRITO}{drone}{RESET}-{destino_fmt}")
+                destino_fmt = f"{self.APAGADO}{destino}{self.RESET}"
+            drone_fmt = f"{self.NEGRITO}{drone}{self.RESET}"
+            partes.append(f"{drone_fmt}-{destino_fmt}")
         return " ".join(partes)
 
     def panel(self, drones: List[Drone], turno: int) -> str:
@@ -158,7 +166,7 @@ class Renderer:
 
         prefixo = f"   turno {turno} |"
         if self._cor:
-            prefixo = f"{APAGADO}{prefixo}{RESET}"
+            prefixo = f"{self.APAGADO}{prefixo}{self.RESET}"
         return f"{prefixo} " + " | ".join(blocos)
 
     def summary(
@@ -182,7 +190,9 @@ class Renderer:
             As linhas do resumo (pintadas se a cor estiver ligada).
         """
         titulo = "=== métricas ==="
-        linhas = [f"{NEGRITO}{titulo}{RESET}" if self._cor else titulo]
+        if self._cor:
+            titulo = f"{self.NEGRITO}{titulo}{self.RESET}"
+        linhas = [titulo]
         movimentos = 0
         for drone in drones:
             chegou = entregas.get(drone.drone_id, total_turnos)
@@ -213,4 +223,4 @@ class Renderer:
             O texto pintado, terminando com o reset de cor.
         """
         r, g, b = rgb
-        return f"\033[38;2;{r};{g};{b}m{texto}{RESET}"
+        return f"\033[38;2;{r};{g};{b}m{texto}{Renderer.RESET}"
