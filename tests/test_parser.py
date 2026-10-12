@@ -1,7 +1,7 @@
 """Testes unitários do Parser.
 
 Cobre o caminho feliz (mapa válido) e os principais casos de erro
-exigidos pelo enunciado: nb_drones inválido, tipos de zona inválidos,
+do formato de mapa: nb_drones inválido, tipos de zona inválidos,
 nomes com traço, start_hub/end_hub duplicados, connections
 duplicadas ou referenciando zonas inexistentes, e metadata inválida.
 """

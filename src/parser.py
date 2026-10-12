@@ -188,7 +188,7 @@ class Parser:
             prefixo = prefixo.strip()
             resto = resto.strip()
 
-            # regra do enunciado: a 1ª linha útil deve ser nb_drones
+            # a 1ª linha útil deve ser nb_drones
             if prefixo != "nb_drones" and nb_drones is None:
                 raise ParseError(
                     numero, "a primeira linha deve ser 'nb_drones: <n>'"

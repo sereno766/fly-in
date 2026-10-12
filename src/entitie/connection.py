@@ -36,7 +36,6 @@ class Connection:
         Raises:
             ValueError: Se max_link_capacity não for um inteiro positivo.
         """
-        # Regra do enunciado: max_link_capacity deve ser inteiro positivo
         if max_link_capacity < 1:
             raise ValueError(
                 f"max_link_capacity deve ser um inteiro positivo, "
@@ -88,7 +87,7 @@ class Connection:
 
         A verificação é bidirecional: connects("a", "b") é equivalente
         a connects("b", "a") — isso é o que garante que "a-b" e "b-a"
-        sejam tratados como a mesma conexão (regra de parsing).
+        sejam tratados como a mesma conexão.
 
         Args:
             name1: Nome de uma das zonas.

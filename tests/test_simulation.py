@@ -124,7 +124,7 @@ LINHA = (
 
 
 def test_fila_avanca_um_passo_por_turno(tmp_path: Path) -> None:
-    """Espaço liberado no turno pode ser usado no mesmo turno (VII.3)."""
+    """Espaço liberado no turno pode ser usado no mesmo turno."""
     sim = _sim(tmp_path, LINHA)
 
     assert sim.apply_turn({"D1": "a"}) == "D1-a"
@@ -156,7 +156,7 @@ def test_saida_em_ordem_de_drone(tmp_path: Path) -> None:
 
 
 def test_dois_drones_na_mesma_zona_de_capacidade_1(tmp_path: Path) -> None:
-    """Zona com max_drones=1 não aceita 2 drones (VII.2)."""
+    """Zona com max_drones=1 não aceita 2 drones."""
     conteudo = LINHA.replace(
         "connection: start-a\n",
         "connection: start-a [max_link_capacity=2]\n",
@@ -261,7 +261,7 @@ RESTRITO = (
 def test_exemplo_do_enunciado_fila_na_conexao_restricted(
     tmp_path: Path,
 ) -> None:
-    """Exemplo VII.3: D2 começa a travessia no turno em que D1 chega."""
+    """Fila na restricted: D2 começa a travessia no turno em que D1 chega."""
     sim = _sim(tmp_path, RESTRITO)
 
     assert sim.apply_turn({"D1": "r"}) == "D1-start-r"
@@ -321,7 +321,7 @@ def test_connection_usage_mostra_ultimo_turno(tmp_path: Path) -> None:
 def test_mapas_oficiais_easy_rodam_com_movimentos_na_mao(
     tmp_path: Path,
 ) -> None:
-    """Mapa easy/01 do subject: 2 drones em fila chegam em 4 turnos."""
+    """Mapa oficial easy/01: 2 drones em fila chegam em 4 turnos."""
     raiz = Path(__file__).resolve().parents[1]
     mapa, nb = Parser(str(raiz / "maps/easy/01_linear_path.txt")).parse()
     sim = Simulation(mapa, nb)
@@ -335,7 +335,7 @@ def test_mapas_oficiais_easy_rodam_com_movimentos_na_mao(
 
     assert linhas[-1] == "D2-goal"
     assert sim.is_finished()
-    assert sim.turn == 4      # = ótimo do subject
+    assert sim.turn == 4      # = ótimo do mapa
 
 
 # --------------------------------------------------------------------------

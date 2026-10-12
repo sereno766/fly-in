@@ -43,7 +43,7 @@ class Map:
         Raises:
             ValueError: Se já existir uma zona com o mesmo nome, ou
                 se já houver uma start_hub/end_hub definida e a nova
-                zona tentar ser outra (regra: exatamente 1 de cada).
+                zona tentar ser outra (exatamente 1 de cada).
         """
         # 1. nome duplicado
         if self.has_zone(zone.name):
@@ -82,7 +82,7 @@ class Map:
 
         Raises:
             ValueError: Se zone_a ou zone_b não existirem ainda no
-                Map (regra do parser: conexões só ligam zonas já
+                Map (conexões só ligam zonas já
                 definidas anteriormente).
         """
         if not self.has_zone(conn.zone_a.name):

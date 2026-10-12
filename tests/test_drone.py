@@ -1,7 +1,7 @@
 """Testes unitários da classe Drone.
 
 Cobre movimento normal, o trânsito em 2 turnos rumo a zonas
-restricted (regra VII.3) e a entrega na zona end.
+restricted e a entrega na zona end.
 """
 
 import pytest

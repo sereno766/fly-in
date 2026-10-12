@@ -128,7 +128,7 @@ def test_restricted_leva_dois_turnos(tmp_path: Path) -> None:
 def test_fila_na_conexao_restricted_exemplo_do_enunciado(
     tmp_path: Path,
 ) -> None:
-    """VII.3: D2 começa a travessia no turno em que D1 chega."""
+    """Fila na restricted: D2 começa a travessia no turno em que D1 chega."""
     mapa, nb = _mapa(tmp_path, (
         "nb_drones: 2\n"
         "start_hub: start 0 0\n"
@@ -254,7 +254,7 @@ OTIMOS: Dict[str, int] = {
 
 @pytest.mark.parametrize("arquivo,otimo", sorted(OTIMOS.items()))
 def test_mapas_oficiais_validos_e_no_otimo(arquivo: str, otimo: int) -> None:
-    """Cada mapa do subject passa pelo juiz no nº ótimo de turnos."""
+    """Cada mapa oficial passa pelo juiz no nº ótimo de turnos."""
     mapa, nb = Parser(str(RAIZ / "maps" / arquivo)).parse()
 
     linhas = _juiz(mapa, nb, Scheduler(mapa, ReservationTable()).plan_all(nb))

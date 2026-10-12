@@ -66,7 +66,6 @@ class Zone:
         Raises:
             ValueError: Se max_capacity não for um inteiro positivo.
         """
-        # Regra do enunciado: max_drones deve ser inteiro positivo
         if max_capacity < 1:
             raise ValueError(
                 f"max_capacity deve ser um inteiro positivo, "
@@ -97,7 +96,7 @@ class Zone:
             raise BlockedZoneError(
                 f"Zona '{self.name}' está bloqueada e não pode ser acessada"
             )
-        # restricted: custa 2 turnos (regra VII.3 do enunciado)
+        # restricted: custa 2 turnos
         if self.zone_type is ZoneType.RESTRICTED:
             return 2
         # normal e priority: custam 1 turno
@@ -115,7 +114,7 @@ class Zone:
         Returns:
             True se a zona não pode aceitar mais um drone agora.
         """
-        # Exceção do enunciado: start e end são ilimitadas
+        # start e end são ilimitadas
         if self.is_start or self.is_end:
             return False
         return current >= self.max_capacity

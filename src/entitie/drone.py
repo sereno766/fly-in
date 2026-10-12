@@ -25,7 +25,7 @@ class DroneStatus(Enum):
 class Drone:
     """Representa o estado individual de um drone na simulação.
 
-    Um movimento para zona restricted leva 2 turnos (regra VII.3):
+    Um movimento para zona restricted leva 2 turnos:
     no 1º turno o drone fica NA CONEXÃO (start_transit) e no 2º ele
     obrigatoriamente chega na zona (finish_transit). Durante o
     trânsito, current_zone continua sendo a zona de origem.
@@ -133,8 +133,8 @@ class Drone:
     def mark_delivered(self) -> None:
         """Marca o drone como entregue (chegou à zona end).
 
-        Drones entregues não são mais rastreados na saída da simulação
-        (regra VII.5).
+        Drones entregues não são mais rastreados na saída da
+        simulação.
         """
         self.status = DroneStatus.DELIVERED
         self.current_connection = None

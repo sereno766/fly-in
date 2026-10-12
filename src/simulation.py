@@ -86,7 +86,7 @@ class Simulation:
 
         A contagem é calculada na hora a partir dos drones (em vez
         de um contador guardado), então nunca fica dessincronizada.
-        Drones entregues não são mais rastreados (VII.5) e drones em
+        Drones entregues não são mais rastreados e drones em
         trânsito estão na conexão, não numa zona.
 
         Returns:
@@ -125,7 +125,7 @@ class Simulation:
         """Valida e executa um turno da simulação.
 
         Drones em trânsito chegam à zona restricted automaticamente
-        (a chegada é obrigatória, VII.3). Os demais só se movem se
+        (a chegada é obrigatória). Os demais só se movem se
         estiverem em "moves"; quem não aparece fica parado.
 
         O turno é atômico: TODAS as regras são conferidas antes de
@@ -290,7 +290,7 @@ class Simulation:
         """Confere max_link_capacity das conexões usadas no turno.
 
         Conta só quem COMEÇA a atravessar neste turno: um drone que
-        está chegando de um trânsito já libera a conexão (VII.3).
+        está chegando de um trânsito já libera a conexão.
 
         Args:
             planejados: Movimentos validados do turno.
